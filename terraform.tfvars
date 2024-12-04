@@ -1,0 +1,1 @@
+spotify_api_key = "paste the key generated after running the docker command"
