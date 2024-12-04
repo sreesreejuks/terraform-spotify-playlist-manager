@@ -1,12 +1,15 @@
+
+# Terraform Spotify Playlist Manager
+
 This repository contains Terraform code to manage Spotify playlists, including automation of playlist creation, updating, and management of tracks. The goal of this setup is to allow seamless integration and automation for managing Spotify playlists directly through Terraform.
 
 ## Setup
 
-Prerequisites: 
-1. Docker Desktop (if you are windows user)
-2. Terraform
-3. Spotify Account ( You need to generate your client ID and secret key from Spotify developer account)
-4. VSCode
+### Prerequisites
+1. **Docker Desktop** (for Windows users)
+2. **Terraform**
+3. **Spotify Account** (You need to generate your client ID and secret key from Spotify Developer account)
+4. **VSCode** (or any preferred editor)
 
 ### 1. Spotify API Access
 
@@ -16,64 +19,68 @@ To use this automation, you need to generate credentials from the Spotify Develo
 - Create a new app to obtain your **Client ID** and **Client Secret**.
 - Set the **Redirect URI** in the Spotify Developer Dashboard (use a local URL like `http://localhost:27228/spotify_callback`).
 
+Now that you’ve created the Spotify app, configure and start the authorization proxy server, which allows Terraform to interact with Spotify.
 
-Now that you created the Spotify app, you are ready to configure and start the authorization proxy server, which allows Terraform to interact with Spotify.
+1. Add the **Client ID** and **Client Secret** values to a `.env` file as `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET`.
+2. Ensure Docker Desktop is running, then start the server:
+   ```bash
+   docker run --rm -it -p 27228:27228 --env-file .env ghcr.io/conradludgate/spotify-auth-proxy
+   ```
+3. Visit the authorization URL provided in the terminal after "Auth:" to authenticate. 
+4. After authentication, the terminal will display "Authorization successful." Leave the server running.
 
-Click Show client secret and copy the value displayed into .env as your SPOTIFY_CLIENT_ID & SPOTIFY_CLIENT_SECRET.
+### 2. Clone This Repository
 
-Make sure Docker Desktop is running, and start the server. It will run in your terminal's foreground.
+In a separate terminal, clone this repository:
+```bash
+git clone https://github.com/sreesreejuks/terraform-spotify-playlist-manager.git
+```
 
-```docker run --rm -it -p 27228:27228 --env-file .env ghcr.io/conradludgate/spotify-auth-proxy
+Locate the Spotify proxy server's terminal, copy the API key displayed, and add it to the `terraform.tfvars` file:
+```hcl
+spotify_api_key = "YOUR_API_KEY"
+```
 
-Visit the authorization server's URL provided in the terminal output after the "Auth:" message.
+### Create a Playlist
 
-Once there, you'll be redirected to Spotify to authenticate. After completing the authentication, the server will confirm with "Authorization successful," indicating that the Terraform provider can now retrieve access tokens.
+To create a new playlist:
+1. Open `create_playlist.tf`.
+2. Add the playlist name, description, and song URLs. For example:
+   ```hcl
+   url = "https://open.spotify.com/track/3yUcJwYu7fXAfqMj9krY6l"
+   ```
+3. Comment out the content in `import_playlist.tf` to avoid conflicts.
 
-Keep the server running during this process.
+Run the following commands to apply the configuration:
+```bash
+terraform init
+terraform plan
+terraform apply --auto-approve
+```
 
-Now clone the code using another terminal 
+### Import an Existing Playlist
 
-Locate the terminal window where the Spotify authorization proxy server is running and copy the API key displayed in the output.
+To import an existing playlist:
+1. Comment out the `create_playlist.tf` content.
+2. Uncomment the `import_playlist.tf` file.
+3. Use the following command, replacing the playlist ID with your own:
+   ```bash
+   terraform import spotify_playlist.imported_playlist YOUR_PLAYLIST_ID
+   ```
+4. Once imported, Terraform will display track IDs for all songs in the playlist. Copy these IDs and paste them into the `playlist.tf` file.
 
-Next, open the terraform.tfvars file and replace the placeholder (...) with the copied API key so that Terraform can authenticate with Spotify. Remember to save the file after making the changes.
+Run the following commands to update the playlist:
+```bash
+terraform init
+terraform plan
+terraform apply --auto-approve
+```
 
-## Note
-### Create the playlist
-Now you are ready to create your playlist. Apply your Terraform configuration. Terraform will show you the changes it plans to make and prompt for your approval.
+### Notes
 
-To create a playlist, select the create_playlist.tf file.  find the song url you want to add, add name, description and put the song name in track.id so that the song can easily identify for example "data.spotify_track.thankyou.id", song (https://open.spotify.com/track/3yUcJwYu7fXAfqMj9krY6l) paste it  url = "<song url>"
+- Always verify the number of songs, song durations, and track details before running `terraform apply` to ensure the playlist is correct.
+- Applying changes will delete the existing playlist and create a new one with the defined tracks.
 
-To create a playlist, open the create_playlist.tf file. Then set the Playlist name, description, and use the song's name in the track.id field for easy identification. 
-For example, for the song "Thank You," data.spotify_track.thankyou.id.
-the URL would be https://open.spotify.com/track/3yUcJwYu7fXAfqMj9krY6l, and you would place it in the url field like this: url = "<song url>".
+---
 
-When creating a playlist, make sure to comment out the content in the import_playlist.tf section, otherwise, it will result in an error.
-
-in your terminal, initialize Terraform, which will install the Spotify provider.
-
-``` terraform init
-``` terraform plan
-``` terraform apply --auto-approve
-
-### Import the exisitng playlist
-To proceed with importing your playlist in Terraform, you need to Comment out create_playlist.tf: In your create_playlist.tf file, you should comment out the resource definition that creates a new playlist and Uncomment the import_playlist.tf and save the file
-
-Now that the playlist import block is uncommented, you'll need to use the terraform import command to import the existing playlist. If your playlist URL is something like https://open.spotify.com/playlist/15XJBjesNNIGyhC5smKPqJ, the ID is 15XJBjesNNIGyhC5smKPqJ.
-
-
-``` terraform import spotify_playlist.imported_playlist 15XJBjesNNIGyhC5smKPqJ
-
-This will import the playlist into Terraform, so you can manage it as a Terraform resource.
-
-After importing the playlist, you can check the state by running terraform show to confirm that the playlist has been successfully imported.
-
-Once you import the playlist, Terraform will display the track IDs for all the songs in that playlist. Copy these track IDs and paste them into your playlist.tf file, where you define the playlist resource.
-
-
-Now, run the following commands:
-
-terraform init – This will initialize your Terraform configuration.
-terraform plan – This will show the execution plan, giving you a preview of the changes that will be made.
-terraform apply --auto-approve – This will apply the changes.
-
-Note: Before applying the terraform apply command, double-check that all the songs, the correct number of songs, and their duration are included in the plan. This ensures that the new playlist matches your expectations, as the command will delete the existing playlist and create a new one with the track IDs you've pasted.
+For more details, visit [Terraform Spotify Provider Documentation](https://github.com/conradludgate/terraform-provider-spotify) 
